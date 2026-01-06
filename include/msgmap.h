@@ -113,6 +113,12 @@ inline bool mm_set_preferred_langs(
                     goto fail;
             }
         }
+
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+        strcpy_s(pref_lang->locale, sizeof(pref_lang->locale), lang);
+#else
+        strcpy(pref_lang->locale, lang);
+#endif
     }
 
     if (g_preferred_langs)
