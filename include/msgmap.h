@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #ifdef _MSC_VER
     #ifdef _CRT_SECURE_NO_WARNINGS
@@ -11,31 +12,30 @@
             _snprintf(buffer, count, format, __VA_ARGS__)
     #else
         #define mm_snprintf(buffer, count, format, ...) \
-            _snprintf_s(buffer, count, count, format, __VA_ARGS__)
+            _snprintf_s(buffer, (count + 1), count, format, __VA_ARGS__)
     #endif
 #else
     #define mm_snprintf(buffer, count, format, ...) \
         snprintf(buffer, count, format, __VA_ARGS__)
 #endif
 
-// MSVC does not like the POSIX name for this function.
-#ifdef _MSC_VER
-    #define strnicmp _strnicmp
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+    #define mm_strncpy(buffer, source, count) \
+        strncpy_s(buffer, (count + 1), source, count)
+#else
+    #define mm_strncpy(buffer, source, count) \
+        strncpy(buffer, source, count)
 #endif
 
-// region_index will be set to this value when
-// the locale string contains no region code
-#define MM_NO_REGION ((size_t)-1)
+// MSVC does not like the POSIX name for this function.
+#ifdef _MSC_VER
+    #define stricmp _stricmp
+#endif
 
 typedef struct _mm_preferred_lang_t
 {
-    char   locale[64];
-    // No lang_index is needed since it will always
-    // be 0
-    size_t lang_length;
-    size_t region_index;
-    // No region_length is needed since it's always
-    // the last part of the string
+    char lang[32];
+    char region[32];
 } mm_preferred_lang_t;
 
 // User preferred languages in order from most to least
@@ -70,7 +70,7 @@ inline bool mm_set_preferred_langs(
     if (!preferred_langs || !preferred_lang_count)
         return false;
 
-    mm_preferred_lang_t *new_langs = malloc(sizeof(mm_preferred_lang_t) * preferred_lang_count);
+    mm_preferred_lang_t *new_langs = (mm_preferred_lang_t *)malloc(sizeof(mm_preferred_lang_t) * preferred_lang_count);
     if (!new_langs)
         return false;
 
@@ -78,53 +78,52 @@ inline bool mm_set_preferred_langs(
     {
         char *underscore;
         const char *lang = preferred_langs[i];
-        size_t j;
+        size_t j, lang_length, region_length;
         mm_preferred_lang_t *pref_lang = &new_langs[i];
 
         if (!lang[0])
             goto fail;
 
-        if (strlen(lang) >= sizeof(pref_lang->locale))
-            goto fail;
-
         underscore = (char *)strchr(lang, '_');
         if (!underscore)
         {
-            pref_lang->region_index = MM_NO_REGION;
-            pref_lang->lang_length  = strlen(lang);
+            lang_length = strlen(lang);
+            if (lang_length >= sizeof(pref_lang->lang))
+                goto fail;
+            region_length = 0;
+
+            mm_strncpy(pref_lang->lang, lang, lang_length);
+            pref_lang->region[0] = '\0';
         }
         else
         {
-            pref_lang->region_index = (size_t)((underscore + 1) - lang);
-            pref_lang->lang_length  = (size_t)(underscore - lang - 1);
+            lang_length = (size_t)(underscore - lang);
+            if (lang_length >= sizeof(pref_lang->lang))
+                goto fail;
+
+            region_length = strlen(underscore + 1);
+            if (region_length >= sizeof(pref_lang->region))
+                goto fail;
+
+            mm_strncpy(pref_lang->lang, lang, lang_length);
+            mm_strncpy(pref_lang->region, underscore + 1, region_length);
         }
 
-        for (j = 0; j < pref_lang->lang_length; j++)
+        for (j = 0; j < lang_length; j++)
         {
-            if (lang[i] < 'a' || lang[i] > 'z')
+            if (pref_lang->lang[j] < 'a' || pref_lang->lang[j] > 'z')
                 goto fail;
         }
 
-        if (underscore)
+        for (j = 0; j < region_length; j++)
         {
-            for (j = pref_lang->region_index; lang[i] != '\0'; j++)
-            {
-                if (lang[i] < 'A' || lang[i] > 'Z')
-                    goto fail;
-            }
+            if (pref_lang->region[j] < 'A' || pref_lang->region[j] > 'Z')
+                goto fail;
         }
-
-#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
-        strcpy_s(pref_lang->locale, sizeof(pref_lang->locale), lang);
-#else
-        strcpy(pref_lang->locale, lang);
-#endif
     }
 
     if (g_preferred_langs)
-    {
         free(g_preferred_langs);
-    }
 
     g_preferred_langs = new_langs;
     g_preferred_lang_count = preferred_lang_count;
@@ -147,57 +146,68 @@ inline void mm_clear_preferred_langs(void)
     }
 }
 
-typedef struct _mm_translation_entry_t
+typedef struct _mm_translation_mapping_t
 {
-    void *table;
+    void *translations;
     const char *lang;
-    const char *region
-} mm_translation_entry_t;
+    const char *region;
+} mm_translation_mapping_t;
 
-inline void *mm_get_translation_table(
-    mm_translation_entry_t *map,
+//
+// Not for direct consumption. Please use the functions provided by
+// your generated header files.
+//
+inline void *mm_get_translations(
+    const mm_translation_mapping_t *map,
+    size_t map_length,
     size_t default_entry_index)
 {
-    if (!map)
+    if (!map || !map_length || default_entry_index >= map_length)
         return NULL;
 
-    mm_translation_entry_t *default_lang_entry = NULL;
-    mm_translation_entry_t *default_full_entry = NULL;
+    mm_translation_mapping_t *default_lang_entry = NULL;
+    mm_translation_mapping_t *default_full_entry = NULL;
 
     for (size_t i = 0; i < g_preferred_lang_count; i++)
     {
-        mm_preferred_lang_t    *lang       = &g_preferred_langs[i];
-        mm_translation_entry_t *entry      = map;
-        mm_translation_entry_t *lang_match = NULL;
+        mm_preferred_lang_t            *lang       = &g_preferred_langs[i];
+        const mm_translation_mapping_t *lang_match = NULL;
 
-        const char *region = NULL;
-        size_t region_length = 0;
-        if (lang->region_index != MM_NO_REGION)
+        for (size_t j = 0; j < map_length; j++)
         {
-            region = &lang->locale[lang->region_index];
-            region_length = strlen(region);
-        }
-
-        while (entry->table)
-        {
-            if (!strnicmp(entry->lang, lang->locale, lang->lang_length))
+            const mm_translation_mapping_t *entry = &map[j];
+            if (!stricmp(entry->lang, lang->lang))
             {
                 lang_match = entry;
-                if (region
-                && !strnicmp(entry->lang, region, region_length))
+                if (entry->region && lang->region && !stricmp(entry->region, lang->region))
                 {
-                    return entry->table;
+                    return entry->translations;
+                }
+
+                if ((!entry->region || !entry->region[0]) && (!lang->region || !lang->region[0]))
+                {
+                    return entry->translations;
                 }
             }
-
-            if (lang_match)
-                return lang_match->table;
-
-            entry++;
         }
+
+        if (lang_match)
+            return lang_match->translations;
     }
 
-    return NULL;
+    return map[default_entry_index].translations;
 }
+
+//
+// Sets the preferred languages from the system.
+// 
+// Return value:
+//   true if succeeded, false if failed.
+//
+inline bool mm_set_preferred_langs_from_system(void);
+
+#if defined(_WIN32) || defined (_WIN64)
+    #include "msgmap_win.h"
+#endif
 
 #endif
