@@ -73,12 +73,6 @@ EXTERN_DEC bool mm_set_preferred_langs(const char **preferred_langs, size_t pref
 EXTERN_DEC void mm_clear_preferred_langs(void);
 
 //
-// Not for direct consumption. Please use the functions provided by
-// your generated header files.
-//
-EXTERN_DEC void *mm_get_translations(const mm_translation_mapping_t *map, size_t map_length, size_t default_entry_index);
-
-//
 // Sets the preferred languages from the system.
 // 
 // Return value:
@@ -177,7 +171,7 @@ EXTERN_IMPL void mm_clear_preferred_langs(void)
 }
 
 
-EXTERN_IMPL void *mm_get_translations(
+inline void *mm_get_translations(
     const mm_translation_mapping_t *map,
     size_t map_length,
     size_t default_entry_index)
