@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <windows.h>
 
-inline bool mm_set_preferred_langs_from_system(void)
+EXTERN_IMPL bool mm_set_preferred_langs_from_system(void)
 {
     WCHAR szLanguages[MAX_PATH];
     LPWSTR pszLanguages = szLanguages;
@@ -53,7 +53,7 @@ inline bool mm_set_preferred_langs_from_system(void)
         }
         else
         {
-            lang_length = (size_t)(pszDash - pszLang) ;
+            lang_length = (size_t)(pszDash - pszLang);
             if (!WideCharToMultiByte(CP_UTF8, 0, pszLang, lang_length, lang->lang, ARRAYSIZE(lang->lang), NULL, NULL))
                 goto cleanup;
             // WideCharToMultiByte does not null terminate with a specified length...

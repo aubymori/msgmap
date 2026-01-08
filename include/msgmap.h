@@ -27,9 +27,12 @@
         strncpy(buffer, source, count)
 #endif
 
-// MSVC does not like the POSIX name for this function.
-#ifdef _MSC_VER
-    #define stricmp _stricmp
+#ifdef __cplusplus
+    #define EXTERN_DEC   extern "C"
+    #define EXTERN_IMPL  extern "C"
+#else
+    #define EXTERN_DEC   extern
+    #define EXTERN_IMPL  
 #endif
 
 typedef struct _mm_preferred_lang_t
@@ -38,10 +41,12 @@ typedef struct _mm_preferred_lang_t
     char region[32];
 } mm_preferred_lang_t;
 
-// User preferred languages in order from most to least
-// preferred.
-mm_preferred_lang_t *g_preferred_langs = NULL;
-size_t g_preferred_lang_count = 0;
+typedef struct _mm_translation_mapping_t
+{
+    void *translations;
+    const char *lang;
+    const char *region;
+} mm_translation_mapping_t;
 
 //
 // Sets the preferred languages.
@@ -53,7 +58,7 @@ size_t g_preferred_lang_count = 0;
 //     Each language must consist of a language indicator with only
 //     lowercase Latin letters optionally followed by an underscore
 //     followed by a region indicator with only uppercase Latin letters.
-//     The entire string must be 63 characters or less. 
+//     The language and region must both be 31 characters or less.
 //     
 //     Examples: en, en_US
 //
@@ -63,7 +68,32 @@ size_t g_preferred_lang_count = 0;
 // Return value:
 //   true if succeeded, false if failed.
 //
-inline bool mm_set_preferred_langs(
+EXTERN_DEC bool mm_set_preferred_langs(const char **preferred_langs, size_t preferred_lang_count);
+
+EXTERN_DEC void mm_clear_preferred_langs(void);
+
+//
+// Not for direct consumption. Please use the functions provided by
+// your generated header files.
+//
+EXTERN_DEC void *mm_get_translations(const mm_translation_mapping_t *map, size_t map_length, size_t default_entry_index);
+
+//
+// Sets the preferred languages from the system.
+// 
+// Return value:
+//   true if succeeded, false if failed.
+//
+EXTERN_DEC bool mm_set_preferred_langs_from_system(void);
+
+#ifdef MSGMAP_IMPL
+
+// User preferred languages in order from most to least
+// preferred.
+mm_preferred_lang_t *g_preferred_langs = NULL;
+size_t g_preferred_lang_count = 0;
+
+EXTERN_IMPL bool mm_set_preferred_langs(
     const char **preferred_langs,
     size_t preferred_lang_count)
 {
@@ -136,7 +166,7 @@ fail:
     return false;
 }
 
-inline void mm_clear_preferred_langs(void)
+EXTERN_IMPL void mm_clear_preferred_langs(void)
 {
     if (g_preferred_langs)
     {
@@ -146,18 +176,8 @@ inline void mm_clear_preferred_langs(void)
     }
 }
 
-typedef struct _mm_translation_mapping_t
-{
-    void *translations;
-    const char *lang;
-    const char *region;
-} mm_translation_mapping_t;
 
-//
-// Not for direct consumption. Please use the functions provided by
-// your generated header files.
-//
-inline void *mm_get_translations(
+EXTERN_IMPL void *mm_get_translations(
     const mm_translation_mapping_t *map,
     size_t map_length,
     size_t default_entry_index)
@@ -176,15 +196,15 @@ inline void *mm_get_translations(
         for (size_t j = 0; j < map_length; j++)
         {
             const mm_translation_mapping_t *entry = &map[j];
-            if (!stricmp(entry->lang, lang->lang))
+            if (!strcmp(entry->lang, lang->lang))
             {
                 lang_match = entry;
-                if (entry->region && lang->region && !stricmp(entry->region, lang->region))
+                if (entry->region && !strcmp(entry->region, lang->region))
                 {
                     return entry->translations;
                 }
 
-                if ((!entry->region || !entry->region[0]) && (!lang->region || !lang->region[0]))
+                if ((!entry->region || !entry->region[0]) && !lang->region[0])
                 {
                     return entry->translations;
                 }
@@ -198,16 +218,16 @@ inline void *mm_get_translations(
     return map[default_entry_index].translations;
 }
 
-//
-// Sets the preferred languages from the system.
-// 
-// Return value:
-//   true if succeeded, false if failed.
-//
-inline bool mm_set_preferred_langs_from_system(void);
-
 #if defined(_WIN32) || defined (_WIN64)
     #include "msgmap_win.h"
+#elif defined(__APPLE__) && defined(__MACH__)
+    #include "msgmap_darwin.h"
+#else 
+    // If not Windows or macOS, assume we are on Linux or FreeBSD
+    // and try to get the language the way GNU gettext does.
+    #include "msgmap_gettext.h"
 #endif
 
-#endif
+#endif // MSGMAP_IMPL
+    
+#endif // _MSGMAP_H
