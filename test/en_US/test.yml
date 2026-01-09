@@ -1,0 +1,2 @@
+regular_string: Hello
+formatted_string: Hello %arg:s%
