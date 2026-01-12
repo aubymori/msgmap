@@ -1,10 +1,32 @@
-const yaml = require("yaml");
-const { argv } = require("node:process");
-const fs = require("fs");
+const yaml         = require("yaml");
+const { argv }     = require("node:process");
+const fs           = require("fs");
 
-const LOCALE_REGEX = /^([a-z]{1,31})(?:()|_([A-Z]{1,31}))$/;
-const PRINTF_FORMAT_REGEX = /^([+\- ]+|)([0-9]+|)(?:\.([0-9]+)|())(hh|h|l|ll|j|z||t|L|)([diouxXfFeEgGaAcsP])$/;
-const C_VAR_REGEX = /^([a-zA-Z_][1-9a-zA-Z_]+)$/;
+const LOCALE_REGEX            = /^([a-z]{1,31})(?:()|_([A-Z]{1,31}))$/;
+const PRINTF_FORMAT_REGEX     = /^([+\- ]+|)([0-9]+|)(?:\.([0-9]+)|())(hh|h|l|ll|j|z||t|L|)([diouxXfFeEgGaAcsP])$/;
+const C_VAR_REGEX             = /^([a-zA-Z_][1-9a-zA-Z_]+)$/;
+
+const LogType = {
+    INFO:    0,
+    WARNING: 1,
+    FATAL:   2,
+};
+
+function log(type, text)
+{
+    switch (type)
+    {
+        case LogType.INFO:
+            console.log(`INFO: ${text}`);
+            break;
+        case LogType.WARNING:
+            console.log(`\x1b[93mWARNING: ${text}\x1b[39m`);
+            break;
+        case LogType.FATAL:
+            console.log(`\x1b[91mFATAL: ${text}\x1b[39m`);
+            break;
+    }
+}
 
 function printUsage()
 {
@@ -44,6 +66,7 @@ let g_outDir      = "build";
 let g_inDir       = null;
 let g_defaultLang = "en_US";
 
+// Parse arguments
 for (let i = 2; i < argv.length; i++)
 {
     if (argv[i] == "-w" || argv[i] == "--wide")
@@ -54,7 +77,7 @@ for (let i = 2; i < argv.length; i++)
     {
         if (i == (argv.length - 1))
         {
-            console.log(`FATAL: ${argv[i]} provided with no value`);
+            log(LogType.FATAL, `${argv[i]} provided with no value`);
             return;
         }
 
@@ -64,11 +87,17 @@ for (let i = 2; i < argv.length; i++)
     {
         if (i == (argv.length - 1))
         {
-            console.log(`FATAL: ${argv[i]} provided with no value`);
+            log(LogType.FATAL, `${argv[i]} provided with no value`);
             return;
         }
 
-        g_defaultLang = argv[++i];
+        let lang = argv[++i];
+        if (!lang.match(LOCALE_REGEX))
+        {
+            log(LogType.FATAL, `Invalid value '${lang}' provided for ${argv[i]} option`);
+            return;
+        }
+        g_defaultLang = lang;
     }
     else if (i == (argv.length - 1))
     {
@@ -76,21 +105,66 @@ for (let i = 2; i < argv.length; i++)
     }
     else
     {
-        console.log(`FATAL: Unrecognized option: ${argv[i]}`);
+        log(LogType.FATAL, `Unrecognized option: ${argv[i]}`);
         return;
     }
 }
 
 if (!g_inDir)
 {
-    console.log("FATAL: Translations directory was not provided");
+    log(LogType.FATAL, "Translations directory was not provided");
     return;
 }
 
 if (!fs.existsSync(g_inDir) || !fs.lstatSync(g_inDir).isDirectory())
 {
-    console.log(`FATAL: Translations directory '${g_inDir}' does not exist or is not a directory.`);
+    log(LogType.FATAL, `Translations directory '${g_inDir}' does not exist or is not a directory.`);
     return;
 }
 
-console.log(fs.readdirSync(g_inDir));
+let subfolders = fs.readdirSync(g_inDir);
+
+if (!subfolders.includes(g_defaultLang) || !fs.lstatSync(`${g_inDir}/${g_defaultLang}`).isDirectory())
+{
+    log(LogType.FATAL, `Default language '${g_defaultLang}' does not have an accompanying directory in the translations directory.`);
+    return;
+}
+
+let recordList = [];
+let defaultRecords = fs.readdirSync(`${g_inDir}/${g_defaultLang}`);
+for (const recordName of defaultRecords)
+{
+    let recordPath = `${g_inDir}/${g_defaultLang}/${recordName}`;
+    if (fs.lstatSync(recordPath).isDirectory())
+        continue;
+
+    if (recordName.endsWith(".yml") || recordName.endsWith(".yaml"))
+        recordList.push(recordName.replace(/\.y(a|)ml$/, ""));
+}
+
+let langList = [g_defaultLang];
+for (const lang of subfolders)
+{
+    let langPath = `${g_inDir}/${lang}`;
+    if (!fs.lstatSync(langPath).isDirectory())
+        continue;
+
+    if (!lang.match(LOCALE_REGEX))
+    {
+        log(LogType.WARNING, `Skipping subdirectory '${lang}' as it is not a valid locale name.`);
+        continue;
+    }
+
+    langList.push(lang);
+
+    let langRecords = fs.readdirSync(langPath);
+    for (const recordName of recordList)
+    {
+        if (!langRecords.includes(`${recordName}.yml`)
+        && !langRecords.includes(`${recordName}.yaml`))
+        {
+            log(LogType.FATAL, `Language '${lang}' does not include record '${recordName}'`);
+            return;
+        }
+    }
+}
