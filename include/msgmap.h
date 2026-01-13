@@ -59,7 +59,7 @@ typedef struct _mm_translation_mapping_t
 } mm_translation_mapping_t;
 
 //
-// Sets the preferred languages.
+// Sets the list preferred languages.
 //
 // Arguments:
 //   preferred_langs: Pointer to array of string pointers that includes
@@ -80,10 +80,14 @@ typedef struct _mm_translation_mapping_t
 //
 MM_DEC bool mm_set_preferred_langs(const char **preferred_langs, size_t preferred_lang_count);
 
+//
+// Clears the list of preferred languages.
+//
 MM_DEC void mm_clear_preferred_langs(void);
 
 //
-// Sets the preferred languages from the system.
+// Retrieves the list of preferred languages from
+// the system.
 // 
 // Return value:
 //   true if succeeded, false if failed.
