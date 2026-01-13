@@ -1,6 +1,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 
-EXTERN_IMPL bool mm_set_preferred_langs_from_system(void)
+MM_IMPL bool mm_set_preferred_langs_from_system(void)
 {
     bool ret = false;
     CFStringRef lang;

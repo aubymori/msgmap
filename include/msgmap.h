@@ -28,11 +28,11 @@
 #endif
 
 #ifdef __cplusplus
-    #define EXTERN_DEC   extern "C"
-    #define EXTERN_IMPL  extern "C"
+    #define MM_DEC   extern "C"
+    #define MM_IMPL  extern "C"
 #else
-    #define EXTERN_DEC   extern
-    #define EXTERN_IMPL  
+    #define MM_DEC   extern
+    #define MM_IMPL  
 #endif
 
 typedef struct _mm_preferred_lang_t
@@ -68,9 +68,9 @@ typedef struct _mm_translation_mapping_t
 // Return value:
 //   true if succeeded, false if failed.
 //
-EXTERN_DEC bool mm_set_preferred_langs(const char **preferred_langs, size_t preferred_lang_count);
+MM_DEC bool mm_set_preferred_langs(const char **preferred_langs, size_t preferred_lang_count);
 
-EXTERN_DEC void mm_clear_preferred_langs(void);
+MM_DEC void mm_clear_preferred_langs(void);
 
 //
 // Sets the preferred languages from the system.
@@ -78,7 +78,7 @@ EXTERN_DEC void mm_clear_preferred_langs(void);
 // Return value:
 //   true if succeeded, false if failed.
 //
-EXTERN_DEC bool mm_set_preferred_langs_from_system(void);
+MM_DEC bool mm_set_preferred_langs_from_system(void);
 
 #ifdef MSGMAP_IMPL
 
@@ -87,7 +87,7 @@ EXTERN_DEC bool mm_set_preferred_langs_from_system(void);
 mm_preferred_lang_t *g_preferred_langs = NULL;
 size_t g_preferred_lang_count = 0;
 
-EXTERN_IMPL bool mm_set_preferred_langs(
+MM_IMPL bool mm_set_preferred_langs(
     const char **preferred_langs,
     size_t preferred_lang_count)
 {
@@ -160,7 +160,7 @@ fail:
     return false;
 }
 
-EXTERN_IMPL void mm_clear_preferred_langs(void)
+MM_IMPL void mm_clear_preferred_langs(void)
 {
     if (g_preferred_langs)
     {

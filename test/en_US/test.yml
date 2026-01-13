@@ -1,2 +1,3 @@
 regular_string: Hello
 formatted_string: Hello %s % %arg:s%
+complex_format: "%month:d%/%day:d%/%year:04d%"

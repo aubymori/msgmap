@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <windows.h>
 
-EXTERN_IMPL bool mm_set_preferred_langs_from_system(void)
+MM_IMPL bool mm_set_preferred_langs_from_system(void)
 {
     WCHAR szLanguages[MAX_PATH];
     LPWSTR pszLanguages = szLanguages;

@@ -1,2 +1,3 @@
 regular_string: こんにちは
 formatted_string: こんにちは %arg:s%
+complex_format: "%year:04d%年%month:02d%月%day:02d%日"

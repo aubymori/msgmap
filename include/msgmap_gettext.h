@@ -1,6 +1,6 @@
 #include <locale.h>
 
-EXTERN_IMPL bool mm_set_preferred_langs_from_system(void)
+MM_IMPL bool mm_set_preferred_langs_from_system(void)
 {
     setlocale(LC_MESSAGES, "");
     char *locale = setlocale(LC_MESSAGES, NULL);
