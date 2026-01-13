@@ -80,6 +80,29 @@ MM_DEC void mm_clear_preferred_langs(void);
 //
 MM_DEC bool mm_set_preferred_langs_from_system(void);
 
+#ifdef __cplusplus
+
+#include <string>
+
+//
+// Converts a formatted string into a C++ string
+// and frees the original buffer.
+//
+// Arguments:
+//   str: Pointer to the formatted string.
+//
+// Return value:
+//   The converted C++ string
+//
+inline std::string mm_cpp_string(char *str)
+{
+    std::string cppstr = str;
+    free(str);
+    return cppstr;
+}
+
+#endif
+
 #ifdef MSGMAP_IMPL
 
 // User preferred languages in order from most to least
