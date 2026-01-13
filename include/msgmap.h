@@ -1,30 +1,20 @@
 #ifndef _MSGMAP_H
 #define _MSGMAP_H
 
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 
 #ifdef _MSC_VER
-    #ifdef _CRT_SECURE_NO_WARNINGS
-        #define mm_snprintf(buffer, count, format, ...) \
-            _snprintf(buffer, count, format, __VA_ARGS__)
-    #else
-        #define mm_snprintf(buffer, count, format, ...) \
-            _snprintf_s(buffer, (count + 1), count, format, __VA_ARGS__)
-    #endif
+    #define mm_snprintf(buffer, count, format, ...) \
+        _snprintf(buffer, count, format, __VA_ARGS__)
+    #define mm_snwprintf(buffer, count, format, ...) \
+        _snwprintf(buffer, count, format, __VA_ARGS__)
 #else
     #define mm_snprintf(buffer, count, format, ...) \
         snprintf(buffer, count, format, __VA_ARGS__)
-#endif
-
-#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
-    #define mm_strncpy(buffer, source, count) \
-        strncpy_s(buffer, (count + 1), source, count)
-#else
-    #define mm_strncpy(buffer, source, count) \
-        strncpy(buffer, source, count)
 #endif
 
 #ifdef __cplusplus
@@ -34,6 +24,26 @@
     #define MM_DEC   extern
     #define MM_IMPL  
 #endif
+
+#define MM_FORMATTED_STRING_BODY(format_str, ...) \
+    static const char *format = format_str; \
+    size_t length = mm_snprintf(NULL, 0, format, __VA_ARGS__); \
+    char *buffer = (char *)malloc(length + 1); \
+    if (!buffer) \
+        return NULL; \
+    buffer[length] = '\0'; \
+    mm_snprintf(buffer, length, format, __VA_ARGS__); \
+    return buffer;
+
+#define MM_FORMATTED_STRING_BODY_W(format_str, ...) \
+    static const wchar_t *format = format_str; \
+    size_t length = mm_snwprintf(NULL, 0, format, __VA_ARGS__); \
+    wchar_t *buffer = (wchar_t *)malloc((length + 1) * sizeof(wchar_t)); \
+    if (!buffer) \
+        return NULL; \
+    buffer[length] = L'\0'; \
+    mm_snwprintf(buffer, length, format, __VA_ARGS__); \
+    return buffer;
 
 typedef struct _mm_preferred_lang_t
 {
@@ -109,6 +119,12 @@ inline std::string mm_cpp_string(char *str)
 // preferred.
 mm_preferred_lang_t *g_preferred_langs = NULL;
 size_t g_preferred_lang_count = 0;
+
+inline void mm_strncpy(char *buffer, const char *source, size_t count)
+{
+    strncpy(buffer, source, count);
+    buffer[count] = '\0';
+}
 
 MM_IMPL bool mm_set_preferred_langs(
     const char **preferred_langs,
@@ -196,10 +212,9 @@ MM_IMPL void mm_clear_preferred_langs(void)
 
 inline void *mm_get_translations(
     const mm_translation_mapping_t *map,
-    size_t map_length,
-    size_t default_entry_index)
+    size_t map_length)
 {
-    if (!map || !map_length || default_entry_index >= map_length)
+    if (!map || !map_length)
         return NULL;
 
     mm_translation_mapping_t *default_lang_entry = NULL;
@@ -232,7 +247,7 @@ inline void *mm_get_translations(
             return lang_match->translations;
     }
 
-    return map[default_entry_index].translations;
+    return map[0].translations;
 }
 
 #if defined(_WIN32) || defined (_WIN64)
