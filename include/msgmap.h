@@ -242,6 +242,12 @@ inline void *mm_get_translations(
 #else 
     // If not Windows or macOS, assume we are on Linux or FreeBSD
     // and try to get the language the way GNU gettext does.
+    #include <locale.h>
+
+    #ifndef LC_MESSAGES
+        #error "No suitable mm_set_preferred_langs_from_system implementation"
+    #endif
+
     #include "msgmap_gettext.h"
 #endif
 

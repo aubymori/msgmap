@@ -1,5 +1,3 @@
-#include <locale.h>
-
 MM_IMPL bool mm_set_preferred_langs_from_system(void)
 {
     setlocale(LC_MESSAGES, "");
