@@ -488,7 +488,7 @@ typedef struct _mm_${record}_translations_t
     for (const strName in defaultLangData.formattedStrings)
     {
         fileText +=
-`   ${charType} *(*${strName})(${formatCArgs(defaultLangData.formattedStrings[strName])});
+`    ${charType} *(*${strName})(${formatCArgs(defaultLangData.formattedStrings[strName])});
 `;
     }
 
@@ -536,7 +536,7 @@ MM_DEC const mm_${record}_translations_t *mm_get_${record}_translations(void);
         for (const strName in langData.formattedStrings)
         {
             fileText +=
-`   mm_${record}_translations_${strName}_${lang},
+`    mm_${record}_translations_${strName}_${lang},
 `;
         }
 
@@ -553,7 +553,7 @@ static const mm_translation_mapping_t mm_${record}_map[] = {
         let matches = lang.match(LOCALE_REGEX);
 
         fileText +=
-`   { (void *)&mm_${record}_translations_${lang}, "${matches[1]}", ${matches[2] ? `"${matches[2]}"` : "NULL"} },
+`    { (void *)&mm_${record}_translations_${lang}, "${matches[1]}", ${matches[2] ? `"${matches[2]}"` : "NULL"} },
 `;
     }
 
