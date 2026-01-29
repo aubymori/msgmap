@@ -96,23 +96,54 @@ MM_DEC bool mm_set_preferred_langs_from_system(void);
 
 #ifdef __cplusplus
 
-#include <string>
-
-//
-// Converts a formatted string into a C++ string
-// and frees the original buffer.
-//
-// Arguments:
-//   str: Pointer to the formatted string.
-//
-// Return value:
-//   The converted C++ string
-//
-inline std::string mm_cpp_string(char *str)
+namespace msgmap
 {
-    std::string cppstr = str;
-    free(str);
-    return cppstr;
+    //
+    // A basic wrapper class that will free a formatted string
+    // on scope exit.
+    //
+    // Example usage:
+    //   msgmap::string some_str = translations->formatted_string(1, 2, 3);
+    //   printf("%s\n", some_str.get());
+    //
+    template <typename T>
+    class string_t
+    {
+    private:
+        T *_str;
+
+    public:
+        inline string_t(T *str)
+            : _str(str)
+        {}
+
+        inline ~string_t()
+        {
+            if (_str)
+                free(_str);
+        }
+
+        inline string_t<T> &operator=(T *str)
+        {
+            string_t<T> s(str);
+            return s;
+        }
+
+        inline T *get()
+        {
+            return _str;
+        }
+
+        inline operator T *() const
+        {
+            return _str;
+        }
+    };
+
+    using string = string_t<char>;
+#ifdef _MSC_VER
+    using wstring = string_t<wchar_t>;
+#endif
 }
 
 #endif
