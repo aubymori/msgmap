@@ -356,12 +356,12 @@ function formatCCallArgs(formattedString)
 function formatCString(string)
 {
     const REPLACEMENTS = {
+        "\\": "\\\\",
         "\f": "\\f",
         "\n": "\\n",
         "\r": "\\r",
         "\t": "\\t",
         "\v": "\\v",
-        "\\": "\\\\",
         "\"": "\\\"",
     };
 
