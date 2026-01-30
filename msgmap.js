@@ -481,7 +481,7 @@ typedef struct _mm_${record}_translations_t
     for (const strName in defaultLangData.strings)
     {
         fileText +=
-`   const ${charType} *${strName};
+`    const ${charType} *${strName};
 `;
     }
 
@@ -529,7 +529,7 @@ MM_DEC const mm_${record}_translations_t *mm_get_${record}_translations(void);
         for (const strName in langData.strings)
         {
             fileText +=
-`   ${formatCString(langData.strings[strName])}, // ${strName}
+`    ${formatCString(langData.strings[strName])}, // ${strName}
 `;
         }
 
